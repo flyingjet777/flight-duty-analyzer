@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Duty Analyzer | 비행근무제한 규정</title>
+    <!-- Modern Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-light: #f8fafc;
+            --panel-bg: rgba(255, 255, 255, 0.85);
+            /* Bright panel background */
+            --panel-border: rgba(0, 0, 0, 0.06);
+            /* Darker border for light theme */
+            --text-primary: #1e293b;
+            /* Dark text for light mode */
+            --text-secondary: #475569;
+            --accent-gradient: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+            --accent-warm: linear-gradient(135deg, #d946ef 0%, #f43f5e 100%);
+            --accent-alert: #ef4444;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Dynamic Background */
+        .bg-shapes {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .shape {
+            position: absolute;
+            filter: blur(120px);
+            opacity: 0.5;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .shape-1 {
+            width: 600px;
+            height: 600px;
+            background: #00f2fe33;
+            top: -10%;
+            left: -10%;
+        }
+
+        .shape-2 {
+            width: 500px;
+            height: 500px;
+            background: #f093fb22;
+            bottom: -10%;
+            right: -5%;
+            animation-delay: -5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) rotate(0deg) scale(1);
+            }
+
+            100% {
+                transform: translate(50px, 50px) rotate(15deg) scale(1.1);
+            }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        /* Typography & Headings */
+        .hero {
+            text-align: center;
+            margin-bottom: 5rem;
+            animation: fadeUp 1s ease-out;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.5rem 1.2rem;
+            background: rgba(79, 172, 254, 0.1);
+            border: 1px solid rgba(79, 172, 254, 0.2);
+            color: #4facfe;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            margin-bottom: 1rem;
+            background: var(--text-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h1 span {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            transform: translateY(20px);
+            animation: fadeUp 0.8s forwards;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 35px 60px -15px rgba(0, 242, 254, 0.1);
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        h2::before {
+            content: '';
+            display: block;
+            width: 4px;
+            height: 1.2em;
+            background: var(--accent-gradient);
+            border-radius: 4px;
+        }
+
+        /* Grid Layouts */
+        .grid-terms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        @keyframes liquidGradient {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .term-card {
+            background: linear-gradient(120deg, #ffffff, #f8fafc, #f1f5f9, #ffffff);
+            background-size: 300% 300%;
+            animation: liquidGradient 12s ease-in-out infinite;
+            border-radius: 20px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.9);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.6), 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+            transition: var(--transition);
+        }
+
+        .term-card:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 10px 20px -5px rgba(71, 85, 105, 0.08), inset 0 0 25px rgba(255, 255, 255, 0.9);
+            border-color: rgba(148, 163, 184, 0.3);
+        }
+
+        .term-card h3 {
+            font-size: 1.2rem;
+            color: #0284c7;
+            margin-bottom: 0.5rem;
+        }
+
+        .term-card p {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+        }
+
+        /* Tables styling */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--panel-border);
+            /* Outer thin border */
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        th,
+        td {
+            padding: 1.2rem 1.5rem;
+            border-bottom: 1px solid var(--panel-border);
+            border-right: 1px solid var(--panel-border);
+            /* Inner vertical thin border */
+            font-size: 0.95rem;
+        }
+
+        td:last-child,
+        th:last-child {
+            border-right: none;
+        }
+
+        th {
+            font-weight: 600;
+            color: #334155;
+            background: rgba(0, 0, 0, 0.04);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--panel-border);
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.015);
+            /* Striped row background */
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(0, 0, 0, 0.03);
+            /* Hover effect */
+        }
+
+        /* Specific highlights */
+        .highlight-unacclimated {
+            color: var(--accent-alert);
+            font-weight: 600;
+        }
+
+        .highlight-text {
+            color: #c026d3;
+            /* Darker distinct color for light UI */
+            font-weight: 600;
+        }
+
+        .alert-box {
+            background: linear-gradient(120deg, rgba(248, 250, 252, 0.8), rgba(254, 242, 242, 0.7), rgba(248, 250, 252, 0.8));
+            background-size: 200% 200%;
+            animation: liquidGradient 10s ease-in-out infinite;
+            border-left: 4px solid var(--accent-alert);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            margin-top: 1.5rem;
+            font-size: 0.95rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        @keyframes fadeUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Delays for panels */
+        .panel-1 {
+            animation-delay: 0.2s;
+        }
+
+        .panel-2 {
+            animation-delay: 0.4s;
+        }
+
+        .panel-3 {
+            animation-delay: 0.6s;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .container {
+                padding: 2rem 1rem;
+            }
+
+            .glass-panel {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+    </div>
+
+    <div class="container">
+        <header class="hero">
+            <div class="badge">Aviation Standards 2026</div>
+            <h1>Flight Duty <span>Analyzer</span></h1>
+            <p>대한민국 조종사 비행시간 기준 및 비행 피로 관리 규정 (아시아나항공 교범 기반)</p>
+        </header>
+
+        <section class="glass-panel panel-1">
+            <h2>기본 용어 정의</h2>
+            <div class="grid-terms">
+                <div class="term-card">
+                    <h3>승무시간 (Flight Time)</h3>
+                    <p>항공기가 이륙을 위해 처음 움직이기 시작한 시각부터 비행 완료 후 완전히 정지한 시각까지 (Block to Block Time).</p>
+                </div>
+                <div class="term-card">
+                    <h3>비행근무시간 (Flight Duty)</h3>
+                    <p>브리핑실(출두 장소) 도착하여 근무 보고한 시간부터 마지막 비행(Series of Flights)이 종료되어 최종적으로 엔진이 완전히 정지될 때까지의 총 근무 시간.</p>
+                </div>
+                <div class="term-card">
+                    <h3>근무시간 (Duty Time)</h3>
+                    <p>근무 보고 시작부터 모든 업무가 종료될 때까지. (비행 완료 후 통상 30분, 시험 및 훈련 비행 시 1시간 포함).</p>
+                </div>
+                <div class="term-card">
+                    <h3>휴식시간 (Rest Period)</h3>
+                    <p>근무를 마친 시각부터 다음 근무가 시작되기 전까지 보장되는 개인 휴식 시간.</p>
+                </div>
+                <div class="term-card">
+                    <h3 style="color: var(--accent-alert);">시차 미적응 (Unacclimated)</h3>
+                    <p>출발지 대비 시차가 4시간을 초과하는 지역 운항 후, 현지에서 36시간 연속 휴식 또는 72시간 이상 체류하지 못한 상태.</p>
+                </div>
+                <div class="term-card">
+                    <h3 style="color: #c026d3;">예측불가 운항상황 (UOC: Unforeseen Operational Circumstance)</h3>
+                    <p>출근(출두) 이후 천재지변, 기상악화, 기체 고장, 관제 지연 등 통제 불가능한 요인으로 발생한 지연 (승객 및 수하물 지연은 제외).</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="glass-panel panel-2">
+            <h2>일일 최대 비행근무시간 한도</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>편성 인원</th>
+                            <th>기본 승무시간</th>
+                            <th>휴식시설 등급</th>
+                            <th>기본 최대 비행근무</th>
+                            <th>🚨 시차 미적응 시 (-30분)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>2명</strong> (기장1+부기1)</td>
+                            <td>8시간</td>
+                            <td>무관</td>
+                            <td><strong>13시간</strong></td>
+                            <td class="highlight-unacclimated">12.5시간</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>3명</strong> (기장1+부기2)</td>
+                            <td rowspan="3">12시간</td>
+                            <td>1등급</td>
+                            <td>16시간</td>
+                            <td class="highlight-unacclimated">15.5시간</td>
+                        </tr>
+                        <tr>
+                            <td>2등급</td>
+                            <td>15시간</td>
+                            <td class="highlight-unacclimated">14.5시간</td>
+                        </tr>
+                        <tr>
+                            <td>3등급</td>
+                            <td>14시간</td>
+                            <td class="highlight-unacclimated">13.5시간</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>3명</strong> (기장2+부기1)</td>
+                            <td rowspan="3">13시간</td>
+                            <td>1등급</td>
+                            <td>16.5시간</td>
+                            <td class="highlight-unacclimated">16시간</td>
+                        </tr>
+                        <tr>
+                            <td>2등급</td>
+                            <td>15.5시간</td>
+                            <td class="highlight-unacclimated">15시간</td>
+                        </tr>
+                        <tr>
+                            <td>3등급</td>
+                            <td>14.5시간</td>
+                            <td class="highlight-unacclimated">14시간</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3"><strong>4명</strong> (기장2+부기2)</td>
+                            <td rowspan="3">16시간</td>
+                            <td>1등급</td>
+                            <td>20시간</td>
+                            <td class="highlight-unacclimated">19.5시간</td>
+                        </tr>
+                        <tr>
+                            <td>2등급</td>
+                            <td>19시간</td>
+                            <td class="highlight-unacclimated">18.5시간</td>
+                        </tr>
+                        <tr>
+                            <td>3등급</td>
+                            <td>18시간</td>
+                            <td class="highlight-unacclimated">17.5시간</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="alert-box">
+                <strong>시차 미적응(Unacclimated) 패널티:</strong> 시차가 4시간을 초과하는 지역(Theater) 비행 후, 해당 지역에서 최소 36시간 연속 휴식 또는 72시간
+                이상 체류하지 못하고 등판 시 일괄 30분 단축 적용.
+            </div>
+
+            <div style="margin-top: 2rem;">
+                <h3
+                    style="color: #334155; font-size: 1.1rem; margin-bottom: 1rem; padding-left: 0.5rem; border-left: 3px solid #0284c7;">
+                    🛏️ 인가된 기내 휴식시설 (Rest Facility) 등급 기준</h3>
+                <div class="grid-terms" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                    <div class="term-card">
+                        <h4 style="color: #0284c7; margin-bottom: 0.5rem;">1등급 (Class 1)</h4>
+                        <p style="font-size: 0.9rem;">벙크(Bunk) 또는 수평의 수면 자세가 가능한 객실 외의 지정된 휴식시설.</p>
+                    </div>
+                    <div class="term-card">
+                        <h4 style="color: #0284c7; margin-bottom: 0.5rem;">2등급 (Class 2)</h4>
+                        <p style="font-size: 0.9rem;">수평에 가까운 수면자세(최소 80도 이상)가 가능하고 커튼 등으로 승객과 분리된 객실 좌석.</p>
+                    </div>
+                    <div class="term-card">
+                        <h4 style="color: #0284c7; margin-bottom: 0.5rem;">3등급 (Class 3)</h4>
+                        <p style="font-size: 0.9rem;">발/다리 받침대가 제공되고 40도 이상 기울어지는 객실 또는 조종실 내 좌석.</p>
+                    </div>
+                </div>
+
+                <div class="alert-box" style="margin-top: 1.5rem; border-color: #c026d3;">
+                    <strong style="color: #c026d3;">⚠️ 3등급 미충족 휴식시설 제한 조건:</strong> 기내에 제공되는 휴식시설이 최소한인 3등급 기준조차 충족하지
+                    못하는
+                    경우, 편성에 관계없이 <strong>최대 승무시간은 12시간으로 제한</strong>되며, 최대 비행근무시간은 <strong>3명(3P) 편성 시 13.5시간, 4명(4P) 편성
+                        시 15시간</strong>을 초과할 수 없습니다.
+                </div>
+            </div>
+        </section>
+
+        <section class="glass-panel panel-4" style="animation-delay: 0.5s;">
+            <h2>기간별 누적 최대 허용 시간</h2>
+            <p style="margin-bottom: 1.5rem; color: var(--text-secondary);">단기 및 장기적으로 누적되는 운항승무원의 피로를 관리하기 위한 상한선
+                규제입니다.</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>구분</th>
+                            <th>연속 7일</th>
+                            <th>연속 28일</th>
+                            <th>연속 365일 (1년)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>최대 승무시간</strong> (Flight Time)</td>
+                            <td>-</td>
+                            <td>
+                                <strong>100시간</strong> (2명 편성 시)<br>
+                                <strong>120시간</strong> (3명 이상 편성 시)
+                            </td>
+                            <td class="highlight-unacclimated">1,000시간 (공통)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>최대 근무시간</strong> (Duty Time)</td>
+                            <td class="highlight-unacclimated">60시간</td>
+                            <td class="highlight-unacclimated">190시간</td>
+                            <td>-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="glass-panel panel-3">
+            <h2>법정 최소 휴식시간 보장 (Rest Period)</h2>
+            <p style="margin-bottom: 1.5rem; color: var(--text-secondary);"> 비행근무시간이 증가함에 따라 최소 휴식시간이 16시간 이후부터
+                <span class="highlight-text">2시간씩 추가</span>됩니다.
+            </p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>직전 비행근무시간</th>
+                            <th>법정 최소 휴식시간</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>8시간 미만</strong></td>
+                            <td>10시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>8시간 이상 ~ 9시간 미만</td>
+                            <td>11시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>9시간 이상 ~ 10시간 미만</td>
+                            <td>12시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>10시간 이상 ~ 11시간 미만</td>
+                            <td>13시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>11시간 이상 ~ 12시간 미만</td>
+                            <td>14시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>12시간 이상 ~ 13시간 미만</td>
+                            <td>15시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>13시간 이상 ~ 14시간 미만</td>
+                            <td>16시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>14시간 이상 ~ 15시간 미만</td>
+                            <td>17시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td>15시간 이상 ~ 16시간 미만</td>
+                            <td>18시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight-text">16시간 이상 ~ 17시간 미만</td>
+                            <td class="highlight-unacclimated">20시간 이상 (2시간 상승↑)</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight-text">17시간 이상 ~ 18시간 미만</td>
+                            <td class="highlight-unacclimated">22시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight-text">18시간 이상 ~ 19시간 미만</td>
+                            <td class="highlight-unacclimated">24시간 이상</td>
+                        </tr>
+                        <tr>
+                            <td class="highlight-text">19시간 이상 ~ 20시간 미만</td>
+                            <td class="highlight-unacclimated">26시간 이상</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 2rem;" class="grid-terms">
+                <div class="term-card">
+                    <h3 style="color: #c026d3;">가산 조항 (1.5배)</h3>
+                    <p>정규공항 외 운항으로 부득이하게 휴식을 10시간으로 단축할 경우, <strong>단축된 시간의 1.5배</strong>를 다음 휴식에 반드시 가산하여 보상해야 합니다.</p>
+                </div>
+                <div class="term-card">
+                    <h3 style="color: #c026d3;">장거리 국제선 추가 휴무 제공 (2배)</h3>
+                    <p>한중/한일/한러 노선 제외 국제선 투입 후 모기지 복귀 시, <strong>누적 승무시간의 2배</strong> 이상의 휴식을 주어야 합니다. 단, 현지호텔 등지에서 36시간
+                        이상 휴식 시 제외됩니다.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+</body>
+
+</html>
