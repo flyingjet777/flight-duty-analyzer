@@ -11,6 +11,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap"
         rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --bg-light: #f8fafc;
@@ -237,7 +238,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            text-align: left;
+            text-align: center;
             background: rgba(255, 255, 255, 0.5);
         }
 
@@ -246,8 +247,8 @@
             padding: 1.2rem 1.5rem;
             border-bottom: 1px solid var(--panel-border);
             border-right: 1px solid var(--panel-border);
-            /* Inner vertical thin border */
             font-size: 0.95rem;
+            vertical-align: middle;
         }
 
         td:last-child,
@@ -349,8 +350,52 @@
         <header class="hero">
             <div class="badge">Aviation Standards 2026</div>
             <h1>Flight Duty <span>Analyzer</span></h1>
-            <p>대한민국 조종사 비행시간 기준 및 비행 피로 관리 규정 (아시아나항공 FOM 기반)</p>
+            <p>대한민국 조종사 비행시간 기준 및 비행 피로 관리 규정 (아시아나항공 FOM 73-3 기반)</p>
         </header>
+
+        <!-- 🎉 NEW: Upload & Results Section -->
+        <section class="glass-panel" id="app-dashboard" style="border: 2px solid rgba(14, 165, 233, 0.4);">
+            <h2 style="color: #0284c7;">📊 비행 스케줄 자동 분석 모듈</h2>
+            <div class="upload-container" style="display: flex; gap: 1rem; align-items: center; justify-content: center; flex-direction: column; padding: 1rem;">
+                <p style="color: var(--text-secondary); text-align: center;">아시아나항공 스케줄 PDF 파일들을 한 번에 여러 장 선택해서 올리세요. 타임라인 및 피로도를 자동 추적합니다.</p>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;">
+                    <input type="file" id="pdf-upload" accept=".pdf" multiple style="padding: 0.8rem; background: rgba(255,255,255,0.8); border: 2px dashed #94a3b8; border-radius: 12px; cursor: pointer;">
+                    <button id="analyze-btn" style="background: var(--accent-gradient); color: white; border: none; padding: 0.8rem 2rem; border-radius: 50px; font-weight: 600; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.4); transition: transform 0.2s;">자동 분석 (Analyze)</button>
+                </div>
+                <div id="loading" style="display: none; color: #0284c7; margin-top: 1rem; font-weight: 600;">⏳ 엔진이 시차/규정 정보를 분석 중입니다. 잠시만 기다려 주세요...</div>
+            </div>
+            
+            <div id="results-dashboard" style="display: none; margin-top: 3rem;">
+                <!-- Chart Area -->
+                <div style="margin-bottom: 3rem;">
+                    <h3>📈 기간별 피로도 누적 트렌드 (차트)</h3>
+                    <div style="width: 100%; height: 380px; margin: 1.5rem auto; background: rgba(255,255,255,0.7); padding: 1.5rem; border-radius: 16px; border: 1px solid var(--panel-border); box-shadow: inset 0 0 10px rgba(0,0,0,0.02);">
+                        <canvas id="fatigue-chart"></canvas>
+                    </div>
+                </div>
+
+                <h3>🗓️ 스케줄 비행/휴식시간 타임라인</h3>
+                <div class="table-responsive" style="margin-top: 1.5rem; max-height: 500px; overflow-y: auto;">
+                    <table id="flights-table">
+                        <thead style="position: sticky; top: 0; z-index: 10; background: var(--bg-light);">
+                            <tr>
+                                <th>출발일</th>
+                                <th>FLT</th>
+                                <th>운항 구간</th>
+                                <th>DEP</th>
+                                <th>ARR</th>
+                                <th>승무시간</th>
+                                <th>비행근무시간</th>
+                                <th>다음 비행 전 휴식시간</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flights-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
         <section class="glass-panel panel-1">
             <h2>기본 용어 정의</h2>
@@ -609,6 +654,172 @@
             </div>
         </section>
     </div>
+
+    <script>
+        const API_URL = "http://localhost:8080/api/analyze";
+        const analyzeBtn = document.getElementById("analyze-btn");
+        const pdfUpload = document.getElementById("pdf-upload");
+        const loading = document.getElementById("loading");
+        const resultsDashboard = document.getElementById("results-dashboard");
+        const tbody = document.getElementById("flights-table-body");
+        
+        let fatigueChart = null;
+
+        analyzeBtn.addEventListener("click", async () => {
+            const files = pdfUpload.files;
+            if (files.length === 0) {
+                alert("아시아나 스케줄 PDF 파일을 하나 이상 선택해주세요!");
+                return;
+            }
+
+            loading.style.display = "block";
+            resultsDashboard.style.display = "none";
+            analyzeBtn.disabled = true;
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append("files", files[i]);
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.status === "success" && data.flights.length > 0) {
+                    renderDashboard(data.flights);
+                } else {
+                    alert("분석 오류 (데이터 없음): " + (data.error || "알 수 없는 오류"));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("서버 연결에 실패했습니다. 파이썬 백엔드가(8080 포트) 정상적으로 실행 중인지 확인하세요.");
+            } finally {
+                loading.style.display = "none";
+                analyzeBtn.disabled = false;
+            }
+        });
+
+        function renderDashboard(flights) {
+            resultsDashboard.style.display = "block";
+            tbody.innerHTML = "";
+            
+            let labels = [];
+            let duty7dData = [];
+            let duty28dData = [];
+
+            // Add rows
+            flights.forEach(f => {
+                const tr = document.createElement("tr");
+                
+                let warningsHtml = f.warnings && f.warnings.length > 0 
+                    ? f.warnings.map(w => `<span style="color:var(--accent-alert); font-weight:600; font-size:0.85rem; display:block;">⚠️ ${w}</span>`).join('')
+                    : '';
+                    
+                let statusHtml = '';
+                if (f.rest_emoji) {
+                    statusHtml += `<div style="font-size:1.2rem; margin-bottom:4px;">${f.rest_emoji}</div>`;
+                }
+                statusHtml += warningsHtml;
+
+                tr.innerHTML = `
+                    <td style="font-weight:600;">${f.dep_date_str_local || '-'}</td>
+                    <td style="color:#0284c7; font-weight:700;">${f.flight_no}</td>
+                    <td><span style="background: rgba(0,0,0,0.05); padding: 4px 8px; border-radius: 4px; letter-spacing: 0.5px;">${f.sector}</span></td>
+                    <td style="font-weight: 500;">${f.std_local_str || '-'}</td>
+                    <td style="font-weight: 500;">${f.sta_local_str || '-'}</td>
+                    <td>${f.flight_time_str || '-'}</td>
+                    <td style="font-weight: 500;">${f.fdp_str || '-'}</td>
+                    <td style="font-weight:600; font-size:1.05rem;">${f.rest_period_str || '-'}</td>
+                    <td>${statusHtml}</td>
+                `;
+                tbody.appendChild(tr);
+
+                if(f.std) {
+                    // Extract minimal label for X axis
+                    labels.push(new Date(f.std).toLocaleDateString('ko-KR', {month: 'short', day: 'numeric'}) + " F" + f.flight_no);
+                    duty7dData.push(f.cumulative_duty_7d_mins / 60);
+                    duty28dData.push(f.cumulative_duty_28d_mins / 60);
+                }
+            });
+
+            // Initialize Chart
+            const ctx = document.getElementById('fatigue-chart').getContext('2d');
+            
+            if(fatigueChart) {
+                fatigueChart.destroy();
+            }
+
+            fatigueChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '7일 누적 근무시간 흐름 (상한선: 60h)',
+                            data: duty7dData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#ef4444'
+                        },
+                        {
+                            label: '28일 누적 근무시간 흐름 (상한선: 190h)',
+                            data: duty28dData,
+                            borderColor: '#0284c7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.05)',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#0284c7'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    family: "'Inter', 'Noto Sans KR', sans-serif",
+                                    size: 13
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let val = context.parsed.y;
+                                    let hrs = Math.floor(val);
+                                    let mins = Math.round((val - hrs) * 60);
+                                    return `${context.dataset.label}: ${hrs}시간 ${mins}분`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '시간 (Hours 집중)',
+                                font: { weight: 'bold' }
+                            }
+                        },
+                        x: {
+                            ticks: { maxTicksLimit: 15 } // avoid clutter
+                        }
+                    }
+                }
+            });
+        }
+    </script>
 </body>
 
 </html>
